@@ -6,12 +6,11 @@
     <title>Library Management System</title>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; }
-        button { margin: 5px; }
         #output { margin-top: 20px; }
     </style>
 </head>
 <body>
-    <h1>Welcome to SJBIT Library</h1>
+    <h1>Welcome to PVP Polytechnic Library</h1>
     <div>
         <label for="name">Enter your name:</label>
         <input type="text" id="name">
@@ -24,54 +23,64 @@
         <label for="reg_no">Enter your reg_no:</label>
         <input type="number" id="reg_no">
     </div>
+    <button onclick="registerUser()">Register</button>
 
     <h2>Options:</h2>
-    <button onclick="availableBooks()">Available Books</button>
+    <button onclick="fetchAvailableBooks()">Available Books</button>
     <button onclick="addBook()">Add a Book</button>
     <button onclick="borrowBook()">Borrow a Book</button>
-    <button onclick="leaveLibrary()">Leave Library</button>
 
     <div id="output"></div>
 
     <script>
-        let bookList = ["DBMS", "SE", "JAVA", "OS"];
-        
-        function availableBooks() {
-            const output = document.getElementById('output');
-            output.innerHTML = "Available books are: <br>" + bookList.join("<br>");
-        }
-
-        function addBook() {
-            const newBook = prompt("Enter a new book name to add:");
-            if (newBook) {
-                bookList.push(newBook);
-                const output = document.getElementById('output');
-                output.innerHTML = "Successfully added " + newBook + " to the library.";
-            }
-        }
-
-        function borrowBook() {
-            const bookToBorrow = prompt("Enter the book name you want to borrow:");
-            if (bookList.includes(bookToBorrow)) {
-                const day = Math.floor(Math.random() * 30) + 1;
-                const month = Math.floor(Math.random() * 12) + 1;
-                bookList = bookList.filter(book => book !== bookToBorrow);
-                const output = document.getElementById('output');
-                output.innerHTML = "You have borrowed " + bookToBorrow + ".<br> Return by: " + day + "/" + month + "/2024 (within 15 days).";
-            } else {
-                const output = document.getElementById('output');
-                output.innerHTML = "Sorry, the book " + bookToBorrow + " is not available in our library.";
-            }
-        }
-
-        function leaveLibrary() {
+        async function registerUser() {
             const name = document.getElementById('name').value;
-            if (!name) {
-                alert("Please enter your name.");
-                return;
-            }
-            const output = document.getElementById('output');
-            output.innerHTML = "------------------ THANK YOU ------------------";
+            const branch = document.getElementById('branch').value;
+            const reg_no = document.getElementById('reg_no').value;
+            
+            const response = await fetch('/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `name=${name}&branch=${branch}&reg_no=${reg_no}`
+            });
+            const data = await response.json();
+            document.getElementById('output').innerText = data.message;
+        }
+
+        async function fetchAvailableBooks() {
+            const response = await fetch('/available_books');
+            const data = await response.json();
+            document.getElementById('output').innerHTML = "Available books: <br>" + data.available_books.join("<br>");
+        }
+
+        async function addBook() {
+            const title = prompt("Enter the book title to add:");
+            const response = await fetch('/add_book', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `title=${title}`
+            });
+            const data = await response.json();
+            document.getElementById('output').innerText = data.message;
+        }
+
+        async function borrowBook() {
+            const book_title = prompt("Enter the book name you want to borrow:");
+            const user_id = document.getElementById('name').value; // For simplicity, using name as user identifier
+            
+            const response = await fetch('/borrow_book', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `book_title=${book_title}&user_id=${user_id}`
+            });
+            const data = await response.json();
+            document.getElementById('output').innerText = data.message;
         }
     </script>
 </body>
