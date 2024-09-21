@@ -1,82 +1,95 @@
-from flask import Flask, request, jsonify
-import sqlite3
-from datetime import datetime
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Management System</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        #output { margin-top: 20px; color: green; }
+        .form-group { margin-bottom: 15px; }
+        label { display: inline-block; width: 100px; }
+        input { padding: 5px; }
+        button { margin: 10px 0; padding: 10px 20px; }
+    </style>
+</head>
+<body>
+    <h1>Welcome to PVP Polytechnic Library</h1>
 
-app = Flask(__name__)
+    <div class="form-group">
+        <label for="name">Enter your name:</label>
+        <input type="text" id="name" placeholder="Name">
+    </div>
+    <div class="form-group">
+        <label for="branch">Enter your branch:</label>
+        <input type="text" id="branch" placeholder="Branch">
+    </div>
+    <div class="form-group">
+        <label for="reg_no">Enter your reg_no:</label>
+        <input type="number" id="reg_no" placeholder="Registration No.">
+    </div>
+    <button onclick="registerUser()">Register</button>
 
-# Connect to SQLite database (library.db)
-def get_db_connection():
-    conn = sqlite3.connect('library.db')
-    conn.row_factory = sqlite3.Row
-    return conn
+    <h2>Options:</h2>
+    <button onclick="fetchAvailableBooks()">Available Books</button>
+    <button onclick="addBook()">Add a Book</button>
+    <button onclick="borrowBook()">Borrow a Book</button>
 
-# Register user route
-@app.route('/register', methods=['POST'])
-def register():
-    name = request.form.get('name')
-    branch = request.form.get('branch')
-    reg_no = request.form.get('reg_no')
+    <div id="output"></div>
 
-    # Insert user into the database
-    conn = get_db_connection()
-    conn.execute('INSERT INTO users (name, branch, reg_no) VALUES (?, ?, ?)',
-                 (name, branch, reg_no))
-    conn.commit()
-    conn.close()
+    <script>
+        async function registerUser() {
+            const name = document.getElementById('name').value;
+            const branch = document.getElementById('branch').value;
+            const reg_no = document.getElementById('reg_no').value;
 
-    return jsonify({'message': f'User {name} registered successfully!'})
+            const response = await fetch('/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `name=${name}&branch=${branch}&reg_no=${reg_no}`
+            });
 
-# Fetch available books route
-@app.route('/available_books', methods=['GET'])
-def available_books():
-    conn = get_db_connection()
-    books = conn.execute('SELECT title FROM books WHERE is_available = 1').fetchall()
-    conn.close()
+            const data = await response.json();
+            document.getElementById('output').innerText = data.message;
+        }
 
-    available_books = [book['title'] for book in books]
-    return jsonify({'available_books': available_books})
+        async function fetchAvailableBooks() {
+            const response = await fetch('/available_books');
+            const data = await response.json();
+            document.getElementById('output').innerHTML = "Available books: <br>" + data.available_books.join("<br>");
+        }
 
-# Add a book route
-@app.route('/add_book', methods=['POST'])
-def add_book():
-    title = request.form.get('title')
+        async function addBook() {
+            const title = prompt("Enter the book title to add:");
+            const response = await fetch('/add_book', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `title=${title}`
+            });
 
-    # Insert new book into the database
-    conn = get_db_connection()
-    conn.execute('INSERT INTO books (title) VALUES (?)', (title,))
-    conn.commit()
-    conn.close()
+            const data = await response.json();
+            document.getElementById('output').innerText = data.message;
+        }
 
-    return jsonify({'message': f'Book "{title}" added successfully!'})
+        async function borrowBook() {
+            const book_title = prompt("Enter the book name you want to borrow:");
+            const user_id = document.getElementById('name').value; // Use name as user ID (for simplicity)
 
-# Borrow a book route
-@app.route('/borrow_book', methods=['POST'])
-def borrow_book():
-    book_title = request.form.get('book_title')
-    user_name = request.form.get('user_id')  # User identifier as the name
+            const response = await fetch('/borrow_book', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `book_title=${book_title}&user_id=${user_id}`
+            });
 
-    conn = get_db_connection()
-
-    # Get the book ID if available
-    book = conn.execute('SELECT id FROM books WHERE title = ? AND is_available = 1', (book_title,)).fetchone()
-    if not book:
-        conn.close()
-        return jsonify({'message': f'Book "{book_title}" is not available!'})
-
-    # Get the user ID
-    user = conn.execute('SELECT id FROM users WHERE name = ?', (user_name,)).fetchone()
-    if not user:
-        conn.close()
-        return jsonify({'message': 'User not found!'})
-
-    # Mark the book as borrowed and update borrowed_books table
-    conn.execute('UPDATE books SET is_available = 0 WHERE id = ?', (book['id'],))
-    conn.execute('INSERT INTO borrowed_books (user_id, book_id, borrow_date) VALUES (?, ?, ?)',
-                 (user['id'], book['id'], datetime.now()))
-    conn.commit()
-    conn.close()
-
-    return jsonify({'message': f'Book "{book_title}" borrowed successfully!'})
-
-if __name__ == '__main__':
-    app.run(debug=True)
+            const data = await response.json();
+            document.getElementById('output').innerText = data.message;
+        }
+    </script>
+</body>
+</html>
